@@ -22,7 +22,7 @@ import { FAQService } from '../../services/FAQService';
 
 interface IAdminFaqProps {
   faqs: IFAQ[];
-   faqService: FAQService;
+  faqService: FAQService;
   onFaqAdded: () => Promise<void>;
 }
 
@@ -39,13 +39,13 @@ interface IAdminFaqState {
   displayOrder: number;
   successMessage: string;
   errorMessage: string;
+  editingId: number | null;
 }
 
 export default class AdminFaq extends React.Component<
   IAdminFaqProps,
   IAdminFaqState
 > {
-
   public state: IAdminFaqState = {
     searchText: '',
     selectedCategory: 'All',
@@ -56,9 +56,10 @@ export default class AdminFaq extends React.Component<
     formCategory: 'Other',
     formStatus: 'Draft',
     isFeatured: false,
-    displayOrder: 0,
+    displayOrder: 1,
     successMessage: '',
-    errorMessage: ''
+    errorMessage: '',
+    editingId: null
   };
 
   private _formCategoryOptions: IDropdownOption[] = [
@@ -78,20 +79,44 @@ export default class AdminFaq extends React.Component<
     { key: 'Archived', text: 'Archived' }
   ];
 
+  // Open a blank form to add an FAQ
   private _openAddForm = (): void => {
     this.setState({
       isFormOpen: true,
+      editingId: null,
       question: '',
       answer: '',
       formCategory: 'Other',
       formStatus: 'Draft',
       isFeatured: false,
-      displayOrder: 0
+      displayOrder: 1,
+      errorMessage: '',
+      successMessage: ''
+    });
+  };
+
+  // Open the form with the selected FAQ's existing values
+  private _handleEdit = (faq: IFAQ): void => {
+    this.setState({
+      isFormOpen: true,
+      editingId: faq.Id,
+      question: faq.Title || '',
+      answer: faq.Answer || '',
+      formCategory: faq.Category || 'Other',
+      formStatus: faq.Status || 'Draft',
+      isFeatured: !!faq.IsFeatured,
+      displayOrder: Number(faq.DisplayOrder) || 1,
+      errorMessage: '',
+      successMessage: ''
     });
   };
 
   private _closeForm = (): void => {
-    this.setState({ isFormOpen: false });
+    this.setState({
+      isFormOpen: false,
+      editingId: null,
+      errorMessage: ''
+    });
   };
 
   private _getFilteredFaqs = (): IFAQ[] => {
@@ -120,6 +145,7 @@ export default class AdminFaq extends React.Component<
 
   public render(): React.ReactElement<IAdminFaqProps> {
     const { faqs } = this.props;
+    const { editingId } = this.state;
 
     const totalFaqs = faqs.length;
 
@@ -136,14 +162,14 @@ export default class AdminFaq extends React.Component<
     ).length;
 
     const categories = new Set<string>(
-      faqs.map((faq: IFAQ) => faq.Category)
+      faqs.map(faq => faq.Category)
     );
 
     const filteredFaqs = this._getFilteredFaqs();
 
     const categoryOptions: IDropdownOption[] = [
       { key: 'All', text: 'All Categories' },
-      ...Array.from(categories).map((category: string) => ({
+      ...Array.from(categories).map(category => ({
         key: category,
         text: category
       }))
@@ -167,7 +193,6 @@ export default class AdminFaq extends React.Component<
           }
         }}
       >
-
         {/* HEADER */}
         <Stack
           horizontal
@@ -177,23 +202,14 @@ export default class AdminFaq extends React.Component<
           <Stack tokens={{ childrenGap: 6 }}>
             <Text
               variant="xxLarge"
-              styles={{
-                root: {
-                  fontWeight: 600,
-                  color: '#323130'
-                }
-              }}
+              styles={{ root: { fontWeight: 600, color: '#323130' } }}
             >
               FAQ Administration
             </Text>
 
             <Text
               variant="medium"
-              styles={{
-                root: {
-                  color: '#605e5c'
-                }
-              }}
+              styles={{ root: { color: '#605e5c' } }}
             >
               Manage frequently asked questions
             </Text>
@@ -293,16 +309,9 @@ export default class AdminFaq extends React.Component<
               }
             }}
             styles={{
-              root: {
-                width: 200,
-                minWidth: 200,
-                flexShrink: 0
-              },
+              root: { width: 200, minWidth: 200, flexShrink: 0 },
               dropdown: { height: 40 },
-              title: {
-                height: 40,
-                lineHeight: '38px'
-              }
+              title: { height: 40, lineHeight: '38px' }
             }}
           />
 
@@ -318,45 +327,39 @@ export default class AdminFaq extends React.Component<
               }
             }}
             styles={{
-              root: {
-                width: 225,
-                minWidth: 180,
-                flexShrink: 0
-              },
+              root: { width: 225, minWidth: 180, flexShrink: 0 },
               dropdown: { height: 40 },
-              title: {
-                height: 40,
-                lineHeight: '38px'
-              }
+              title: { height: 40, lineHeight: '38px' }
             }}
           />
         </Stack>
 
+        {/* SUCCESS MESSAGE */}
         {this.state.successMessage && (
           <MessageBar
-          messageBarType={MessageBarType.success}
-          isMultiline={false}
-          onDismiss={() => this.setState({ successMessage: '' })}
-           dismissButtonAriaLabel="Close"
-           >
-          {this.state.successMessage}
-        </MessageBar>
+            messageBarType={MessageBarType.success}
+            isMultiline={false}
+            onDismiss={() => this.setState({ successMessage: '' })}
+            dismissButtonAriaLabel="Close"
+          >
+            {this.state.successMessage}
+          </MessageBar>
         )}
+
+        {/* ERROR MESSAGE */}
         {this.state.errorMessage && (
-  <MessageBar
-    messageBarType={MessageBarType.error}
-    isMultiline={false}
-    onDismiss={() => this.setState({ errorMessage: '' })}
-  >
-    {this.state.errorMessage}
-  </MessageBar>
-)}
+          <MessageBar
+            messageBarType={MessageBarType.error}
+            isMultiline={false}
+            onDismiss={() => this.setState({ errorMessage: '' })}
+            dismissButtonAriaLabel="Close"
+          >
+            {this.state.errorMessage}
+          </MessageBar>
+        )}
 
         {/* FAQ LIST */}
-        <Stack
-          tokens={{ childrenGap: 10 }}
-          styles={{ root: { width: '100%' } }}
-        >
+        <Stack tokens={{ childrenGap: 10 }} styles={{ root: { width: '100%' } }}>
           {filteredFaqs.map(faq => (
             <Stack
               key={faq.Id}
@@ -375,21 +378,12 @@ export default class AdminFaq extends React.Component<
               <Stack tokens={{ childrenGap: 6 }}>
                 <Text
                   variant="medium"
-                  styles={{
-                    root: {
-                      fontWeight: 600,
-                      color: '#323130'
-                    }
-                  }}
+                  styles={{ root: { fontWeight: 600, color: '#323130' } }}
                 >
                   {faq.Title}
                 </Text>
 
-                <Stack
-                  horizontal
-                  verticalAlign="center"
-                  tokens={{ childrenGap: 10 }}
-                >
+                <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 10 }}>
                   <Text
                     variant="small"
                     styles={{ root: { color: '#605e5c' } }}
@@ -413,12 +407,7 @@ export default class AdminFaq extends React.Component<
                   >
                     <Text
                       variant="small"
-                      styles={{
-                        root: {
-                          fontWeight: 600,
-                          color: '#323130'
-                        }
-                      }}
+                      styles={{ root: { fontWeight: 600, color: '#323130' } }}
                     >
                       {faq.Status}
                     </Text>
@@ -430,6 +419,7 @@ export default class AdminFaq extends React.Component<
                 <DefaultButton
                   iconProps={{ iconName: 'Edit' }}
                   text="Edit"
+                  onClick={() => this._handleEdit(faq)}
                 />
 
                 <DefaultButton
@@ -447,18 +437,15 @@ export default class AdminFaq extends React.Component<
           )}
         </Stack>
 
-        {/* ADD FAQ PANEL */}
+        {/* ADD / EDIT FAQ PANEL */}
         <Panel
           isOpen={this.state.isFormOpen}
           onDismiss={this._closeForm}
           type={PanelType.medium}
-          headerText="Add New FAQ"
+          headerText={editingId !== null ? 'Edit FAQ' : 'Add New FAQ'}
           closeButtonAriaLabel="Close"
         >
-          <Stack
-            tokens={{ childrenGap: 15 }}
-            styles={{ root: { paddingTop: 20 } }}
-          >
+          <Stack tokens={{ childrenGap: 15 }} styles={{ root: { paddingTop: 20 } }}>
             <TextField
               label="Question"
               placeholder="Enter the FAQ question"
@@ -487,9 +474,7 @@ export default class AdminFaq extends React.Component<
               selectedKey={this.state.formCategory}
               onChange={(_, option) => {
                 if (option) {
-                  this.setState({
-                    formCategory: String(option.key)
-                  });
+                  this.setState({ formCategory: String(option.key) });
                 }
               }}
               required
@@ -501,9 +486,7 @@ export default class AdminFaq extends React.Component<
               selectedKey={this.state.formStatus}
               onChange={(_, option) => {
                 if (option) {
-                  this.setState({
-                    formStatus: String(option.key)
-                  });
+                  this.setState({ formStatus: String(option.key) });
                 }
               }}
               required
@@ -523,69 +506,87 @@ export default class AdminFaq extends React.Component<
               value={String(this.state.displayOrder)}
               onChange={(_, value) =>
                 this.setState({
-                  displayOrder: Number(value) || 0
+                  displayOrder: value === '' ? 0 : Number(value)
                 })
               }
             />
 
             <Stack horizontal tokens={{ childrenGap: 10 }}>
-             
-<PrimaryButton
-  text="Save FAQ"
-  onClick={async () => {
-    const question = this.state.question.trim();
-    const answer = this.state.answer.trim();
-    const displayOrder = Number(this.state.displayOrder);
+              <PrimaryButton
+                text={editingId !== null ? 'Update FAQ' : 'Save FAQ'}
+                onClick={async () => {
+                  const question = this.state.question.trim();
+                  const answer = this.state.answer.trim();
+                  const displayOrder = Number(this.state.displayOrder);
 
-    if (!question || !answer) {
-      this.setState({
-        errorMessage: 'Please enter both the question and answer.',
-        successMessage: ''
-      });
-      return;
-    }
+                  if (!question || !answer) {
+                    this.setState({
+                      errorMessage: 'Please enter both the question and answer.',
+                      successMessage: ''
+                    });
+                    return;
+                  }
 
-    if (
-      this.state.displayOrder === 0 ||
-      !Number.isFinite(displayOrder)
-    ) {
-      this.setState({
-        errorMessage: 'Please enter a valid display order.',
-        successMessage: ''
-      });
-      return;
-    }
+                  if (
+                    !Number.isFinite(displayOrder) ||
+                    displayOrder <= 0
+                  ) {
+                    this.setState({
+                      errorMessage: 'Please enter a display order greater than 0.',
+                      successMessage: ''
+                    });
+                    return;
+                  }
 
-    try {
-      await this.props.faqService.addFAQ({
-        Title: question,
-        Answer: answer,
-        Category: this.state.formCategory,
-        IsFeatured: this.state.isFeatured,
-        DisplayOrder: displayOrder,
-        IsActive: this.state.formStatus
-      });
+                  try {
+                    const faqData = {
+                      Title: question,
+                      Answer: answer,
+                      Category: this.state.formCategory,
+                      IsFeatured: this.state.isFeatured,
+                      DisplayOrder: displayOrder,
+                      IsActive: this.state.formStatus
+                    };
 
-      await this.props.onFaqAdded();
+                    if (this.state.editingId !== null) {
+                      await this.props.faqService.updateFAQ(
+                        this.state.editingId,
+                        faqData
+                      );
+                    } else {
+                      await this.props.faqService.addFAQ(faqData);
+                    }
 
-      this.setState({
-        isFormOpen: false,
-        question: '',
-        answer: '',
-        errorMessage: '',
-        successMessage: 'FAQ saved successfully!'
-      });
-    } catch (error) {
-      console.error('Error saving FAQ:', error);
+                    await this.props.onFaqAdded();
 
-      this.setState({
-        errorMessage: 'Could not save the FAQ. Please try again.',
-        successMessage: ''
-      });
-    }
-  }}
-/>
+                    this.setState({
+                      isFormOpen: false,
+                      editingId: null,
+                      question: '',
+                      answer: '',
+                      formCategory: 'Other',
+                      formStatus: 'Draft',
+                      isFeatured: false,
+                      displayOrder: 1,
+                      errorMessage: '',
+                      successMessage:
+                        editingId !== null
+                          ? 'FAQ updated successfully!'
+                          : 'FAQ added successfully!'
+                    });
+                  } catch (error) {
+                    console.error('Error saving FAQ:', error);
 
+                    this.setState({
+                      errorMessage:
+                        editingId !== null
+                          ? 'Could not update the FAQ. Please try again.'
+                          : 'Could not save the FAQ. Please try again.',
+                      successMessage: ''
+                    });
+                  }
+                }}
+              />
 
               <DefaultButton
                 text="Cancel"
@@ -594,7 +595,6 @@ export default class AdminFaq extends React.Component<
             </Stack>
           </Stack>
         </Panel>
-
       </Stack>
     );
   }

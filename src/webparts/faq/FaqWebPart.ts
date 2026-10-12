@@ -72,7 +72,7 @@ protected async onInit(): Promise<void> {
 
 
   this._faqService = new FAQService(this._sp);
-  await this._faqService.checkFAQFields();
+  
 
   this.render();
 }
