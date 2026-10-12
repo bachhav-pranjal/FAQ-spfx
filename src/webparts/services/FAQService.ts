@@ -81,4 +81,18 @@ export class FAQService {
       .getById(id)
       .update(faq);
   }
+
+  
+  // Delete an FAQ from SharePoint
+  public async deleteFAQ(id: number): Promise<void> {
+    await this._sp
+      .web
+      .lists
+      .getByTitle("FAQs")
+      .items
+      .getById(id)
+      .delete();
+  }
+
 }
+

@@ -14,7 +14,10 @@ import {
   TextField,
   Toggle,
   MessageBar,
-  MessageBarType
+  MessageBarType,
+  Dialog,
+  DialogType,
+  DialogFooter
 } from '@fluentui/react';
 
 import { IFAQ } from '../../models/IFAQ';
@@ -40,6 +43,9 @@ interface IAdminFaqState {
   successMessage: string;
   errorMessage: string;
   editingId: number | null;
+  isDeleteDialogOpen: boolean;
+  faqToDelete: IFAQ | null;
+  isDeleting: boolean;
 }
 
 export default class AdminFaq extends React.Component<
@@ -59,7 +65,10 @@ export default class AdminFaq extends React.Component<
     displayOrder: 1,
     successMessage: '',
     errorMessage: '',
-    editingId: null
+    editingId: null,
+    isDeleteDialogOpen: false,
+    faqToDelete: null,
+    isDeleting: false
   };
 
   private _formCategoryOptions: IDropdownOption[] = [
@@ -117,6 +126,62 @@ export default class AdminFaq extends React.Component<
       editingId: null,
       errorMessage: ''
     });
+  };
+
+  // Open the custom delete confirmation dialog
+  private _openDeleteDialog = (faq: IFAQ): void => {
+    this.setState({
+      isDeleteDialogOpen: true,
+      faqToDelete: faq,
+      errorMessage: '',
+      successMessage: ''
+    });
+  };
+
+  // Close the dialog without deleting
+  private _closeDeleteDialog = (): void => {
+    if (this.state.isDeleting) {
+      return;
+    }
+
+    this.setState({
+      isDeleteDialogOpen: false,
+      faqToDelete: null
+    });
+  };
+
+  // Delete the selected FAQ from SharePoint
+  private _confirmDelete = async (): Promise<void> => {
+    const faq = this.state.faqToDelete;
+
+    if (!faq || this.state.isDeleting) {
+      return;
+    }
+
+    this.setState({
+      isDeleting: true,
+      errorMessage: ''
+    });
+
+    try {
+      await this.props.faqService.deleteFAQ(faq.Id);
+      await this.props.onFaqAdded();
+
+      this.setState({
+        isDeleteDialogOpen: false,
+        faqToDelete: null,
+        isDeleting: false,
+        successMessage: 'FAQ deleted successfully!',
+        errorMessage: ''
+      });
+    } catch (error) {
+      console.error('Error deleting FAQ:', error);
+
+      this.setState({
+        isDeleting: false,
+        errorMessage: 'Could not delete the FAQ. Please try again.'
+      });
+    }
   };
 
   private _getFilteredFaqs = (): IFAQ[] => {
@@ -202,14 +267,23 @@ export default class AdminFaq extends React.Component<
           <Stack tokens={{ childrenGap: 6 }}>
             <Text
               variant="xxLarge"
-              styles={{ root: { fontWeight: 600, color: '#323130' } }}
+              styles={{
+                root: {
+                  fontWeight: 600,
+                  color: '#323130'
+                }
+              }}
             >
               FAQ Administration
             </Text>
 
             <Text
               variant="medium"
-              styles={{ root: { color: '#605e5c' } }}
+              styles={{
+                root: {
+                  color: '#605e5c'
+                }
+              }}
             >
               Manage frequently asked questions
             </Text>
@@ -309,9 +383,16 @@ export default class AdminFaq extends React.Component<
               }
             }}
             styles={{
-              root: { width: 200, minWidth: 200, flexShrink: 0 },
+              root: {
+                width: 200,
+                minWidth: 200,
+                flexShrink: 0
+              },
               dropdown: { height: 40 },
-              title: { height: 40, lineHeight: '38px' }
+              title: {
+                height: 40,
+                lineHeight: '38px'
+              }
             }}
           />
 
@@ -327,9 +408,16 @@ export default class AdminFaq extends React.Component<
               }
             }}
             styles={{
-              root: { width: 225, minWidth: 180, flexShrink: 0 },
+              root: {
+                width: 225,
+                minWidth: 180,
+                flexShrink: 0
+              },
               dropdown: { height: 40 },
-              title: { height: 40, lineHeight: '38px' }
+              title: {
+                height: 40,
+                lineHeight: '38px'
+              }
             }}
           />
         </Stack>
@@ -359,7 +447,10 @@ export default class AdminFaq extends React.Component<
         )}
 
         {/* FAQ LIST */}
-        <Stack tokens={{ childrenGap: 10 }} styles={{ root: { width: '100%' } }}>
+        <Stack
+          tokens={{ childrenGap: 10 }}
+          styles={{ root: { width: '100%' } }}
+        >
           {filteredFaqs.map(faq => (
             <Stack
               key={faq.Id}
@@ -378,12 +469,21 @@ export default class AdminFaq extends React.Component<
               <Stack tokens={{ childrenGap: 6 }}>
                 <Text
                   variant="medium"
-                  styles={{ root: { fontWeight: 600, color: '#323130' } }}
+                  styles={{
+                    root: {
+                      fontWeight: 600,
+                      color: '#323130'
+                    }
+                  }}
                 >
                   {faq.Title}
                 </Text>
 
-                <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 10 }}>
+                <Stack
+                  horizontal
+                  verticalAlign="center"
+                  tokens={{ childrenGap: 10 }}
+                >
                   <Text
                     variant="small"
                     styles={{ root: { color: '#605e5c' } }}
@@ -407,7 +507,12 @@ export default class AdminFaq extends React.Component<
                   >
                     <Text
                       variant="small"
-                      styles={{ root: { fontWeight: 600, color: '#323130' } }}
+                      styles={{
+                        root: {
+                          fontWeight: 600,
+                          color: '#323130'
+                        }
+                      }}
                     >
                       {faq.Status}
                     </Text>
@@ -425,6 +530,7 @@ export default class AdminFaq extends React.Component<
                 <DefaultButton
                   iconProps={{ iconName: 'Delete' }}
                   text="Delete"
+                  onClick={() => this._openDeleteDialog(faq)}
                 />
               </Stack>
             </Stack>
@@ -442,10 +548,15 @@ export default class AdminFaq extends React.Component<
           isOpen={this.state.isFormOpen}
           onDismiss={this._closeForm}
           type={PanelType.medium}
-          headerText={editingId !== null ? 'Edit FAQ' : 'Add New FAQ'}
+          headerText={
+            editingId !== null ? 'Edit FAQ' : 'Add New FAQ'
+          }
           closeButtonAriaLabel="Close"
         >
-          <Stack tokens={{ childrenGap: 15 }} styles={{ root: { paddingTop: 20 } }}>
+          <Stack
+            tokens={{ childrenGap: 15 }}
+            styles={{ root: { paddingTop: 20 } }}
+          >
             <TextField
               label="Question"
               placeholder="Enter the FAQ question"
@@ -474,7 +585,9 @@ export default class AdminFaq extends React.Component<
               selectedKey={this.state.formCategory}
               onChange={(_, option) => {
                 if (option) {
-                  this.setState({ formCategory: String(option.key) });
+                  this.setState({
+                    formCategory: String(option.key)
+                  });
                 }
               }}
               required
@@ -486,7 +599,9 @@ export default class AdminFaq extends React.Component<
               selectedKey={this.state.formStatus}
               onChange={(_, option) => {
                 if (option) {
-                  this.setState({ formStatus: String(option.key) });
+                  this.setState({
+                    formStatus: String(option.key)
+                  });
                 }
               }}
               required
@@ -513,7 +628,9 @@ export default class AdminFaq extends React.Component<
 
             <Stack horizontal tokens={{ childrenGap: 10 }}>
               <PrimaryButton
-                text={editingId !== null ? 'Update FAQ' : 'Save FAQ'}
+                text={
+                  editingId !== null ? 'Update FAQ' : 'Save FAQ'
+                }
                 onClick={async () => {
                   const question = this.state.question.trim();
                   const answer = this.state.answer.trim();
@@ -521,7 +638,8 @@ export default class AdminFaq extends React.Component<
 
                   if (!question || !answer) {
                     this.setState({
-                      errorMessage: 'Please enter both the question and answer.',
+                      errorMessage:
+                        'Please enter both the question and answer.',
                       successMessage: ''
                     });
                     return;
@@ -532,7 +650,8 @@ export default class AdminFaq extends React.Component<
                     displayOrder <= 0
                   ) {
                     this.setState({
-                      errorMessage: 'Please enter a display order greater than 0.',
+                      errorMessage:
+                        'Please enter a display order greater than 0.',
                       successMessage: ''
                     });
                     return;
@@ -595,6 +714,86 @@ export default class AdminFaq extends React.Component<
             </Stack>
           </Stack>
         </Panel>
+
+        {/* CUSTOM DELETE CONFIRMATION DIALOG */}
+        <Dialog
+          hidden={!this.state.isDeleteDialogOpen}
+          onDismiss={this._closeDeleteDialog}
+          dialogContentProps={{
+            type: DialogType.normal,
+            title: 'Delete FAQ?',
+            subText:
+              'This action cannot be undone. The selected FAQ will be permanently removed from SharePoint.'
+          }}
+          modalProps={{
+            isBlocking: true,
+            styles: {
+              main: {
+                borderRadius: 8,
+                maxWidth: 450
+              }
+            }
+          }}
+        >
+          <Stack tokens={{ childrenGap: 12 }}>
+            {this.state.faqToDelete && (
+              <Stack
+                styles={{
+                  root: {
+                    padding: 14,
+                    background: '#f3f2f1',
+                    borderRadius: 6,
+                    borderLeft: '4px solid #d13438'
+                  }
+                }}
+              >
+                <Text
+                  variant="medium"
+                  styles={{ root: { fontWeight: 600 } }}
+                >
+                  {this.state.faqToDelete.Title}
+                </Text>
+
+                <Text
+                  variant="small"
+                  styles={{ root: { color: '#605e5c' } }}
+                >
+                  {this.state.faqToDelete.Category}
+                </Text>
+              </Stack>
+            )}
+          </Stack>
+
+          <DialogFooter>
+            <PrimaryButton
+              text={
+                this.state.isDeleting ? 'Deleting...' : 'Delete FAQ'
+              }
+              onClick={this._confirmDelete}
+              disabled={this.state.isDeleting}
+              styles={{
+                root: {
+                  background: '#d13438',
+                  borderColor: '#d13438'
+                },
+                rootHovered: {
+                  background: '#a4262c',
+                  borderColor: '#a4262c'
+                },
+                rootPressed: {
+                  background: '#8e1f24',
+                  borderColor: '#8e1f24'
+                }
+              }}
+            />
+
+            <DefaultButton
+              text="Cancel"
+              onClick={this._closeDeleteDialog}
+              disabled={this.state.isDeleting}
+            />
+          </DialogFooter>
+        </Dialog>
       </Stack>
     );
   }
