@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "faq-web-part-client-side-solution",
+    "id": "cc41182c-d625-4b82-b4ca-bde67dee7cf8",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.23.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "FAQWebPart description"
+      },
+      "longDescription": {
+        "default": "FAQWebPart description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "faq-web-part Feature",
+        "description": "The feature that activates elements of the faq-web-part solution.",
+        "id": "33943936-8953-4aa6-9e54-8c49f7fb323c",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/faq-web-part.sppkg"
+  }
+}
