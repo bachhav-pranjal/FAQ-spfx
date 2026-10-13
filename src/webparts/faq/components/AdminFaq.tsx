@@ -253,8 +253,10 @@ export default class AdminFaq extends React.Component<
         styles={{
           root: {
             padding: 24,
-            maxWidth: 1000,
-            margin: '0 auto'
+            width: '100%',
+            maxWidth: 'none',
+            boxSizing: 'border-box'
+            
           }
         }}
       >
@@ -299,6 +301,23 @@ export default class AdminFaq extends React.Component<
               text="Add FAQ"
               onClick={this._openAddForm}
               iconProps={{ iconName: 'Add' }}
+              styles={{
+    root: {
+      background: '#17365D',
+      borderColor: '#17365D'
+    },
+    rootHovered: {
+      background: '#102a49',
+      borderColor: '#102a49'
+    },
+    rootPressed: {
+      background: '#0b1e35',
+      borderColor: '#0b1e35'
+    },
+    rootFocused: {
+      background: '#17365D'
+    }
+  }}
             />
           </Stack>
         </Stack>
