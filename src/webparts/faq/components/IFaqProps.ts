@@ -8,7 +8,7 @@ export interface IFaqProps {
   userDisplayName: string;
   faqs: IFAQ[];
   isAdmin: boolean;
-
+  categories: string[];
   
 faqService: FAQService;
   onFaqAdded: () => Promise<void>;

@@ -23,8 +23,11 @@ import {
 import { IFAQ } from '../../models/IFAQ';
 import { FAQService } from '../../services/FAQService';
 
+
+
 interface IAdminFaqProps {
   faqs: IFAQ[];
+  categories: string[];
   faqService: FAQService;
   onFaqAdded: () => Promise<void>;
 }
@@ -226,20 +229,33 @@ export default class AdminFaq extends React.Component<
       faq => faq.Status === 'Archived'
     ).length;
 
-    const categories = new Set<string>(
-      faqs.map(faq => faq.Category)
-    );
+    const categories: string[] = [
+  'IT Support',
+  'Microsoft Teams',
+  'SharePoint',
+  'HR',
+  'Microsoft 365',
+  'Power Apps',
+  'Power Automate',
+  'Other'
+];
 
-    const filteredFaqs = this._getFilteredFaqs();
+const filteredFaqs = this._getFilteredFaqs();
 
-    const categoryOptions: IDropdownOption[] = [
-      { key: 'All', text: 'All Categories' },
-      ...Array.from(categories).map(category => ({
-        key: category,
-        text: category
-      }))
-    ];
-
+const categoryOptions: IDropdownOption[] = [
+  {
+    key: 'All',
+    text: 'All Categories'
+  },
+  ...Array.from(new Set([
+    ...this.props.categories,
+    ...this.props.faqs.map(faq => faq.Category)
+      .filter((category): category is string => !!category)
+  ])).sort().map(category => ({
+    key: category,
+    text: category
+  }))
+];
     const filterStatusOptions: IDropdownOption[] = [
       { key: 'All', text: 'All Statuses' },
       { key: 'Published', text: 'Published' },
@@ -339,6 +355,7 @@ export default class AdminFaq extends React.Component<
                   padding: 20,
                   border: '1px solid #edebe9',
                   borderRadius: 8,
+                  borderLeft: '4px solid #17365D',
                   background: '#ffffff',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
                 }
@@ -480,6 +497,7 @@ export default class AdminFaq extends React.Component<
                 root: {
                   padding: 18,
                   border: '1px solid #edebe9',
+                  borderLeft: '4px solid #17365D',
                   borderRadius: 8,
                   background: '#ffffff'
                 }

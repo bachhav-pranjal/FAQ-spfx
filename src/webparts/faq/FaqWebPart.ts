@@ -29,6 +29,7 @@ export default class FaqWebPart
   private _sp!: SPFI;
   private _faqService!: FAQService;
   private _faqs: IFAQ[] = [];
+  private _categories: string[] = [];
 
   private _isDarkTheme: boolean = false;
   private _environmentMessage: string = '';
@@ -50,6 +51,7 @@ export default class FaqWebPart
 
     // Load FAQs from SharePoint
     this._faqs = await this._faqService.getFAQs();
+    this._categories = await this._faqService.getCategoriesWithFaqs();
 
     // Get the current environment message
     this._environmentMessage = await this._getEnvironmentMessage();
@@ -84,10 +86,15 @@ export default class FaqWebPart
         userDisplayName: this.context.pageContext.user.displayName,
         faqs: this._faqs,
         isAdmin: this._isAdmin,
+        categories: this._categories,
         faqService: this._faqService,
 
         onFaqAdded: async () => {
-          this._faqs = await this._faqService.getFAQs();
+          
+        this._faqs = await this._faqService.getFAQs();  // Load FAQs from SharePoint
+
+
+        this._categories = await this._faqService.getCategoriesWithFaqs(); // Load categories that have FAQ items
           this.render();
         }
       });
