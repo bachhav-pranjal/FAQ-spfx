@@ -33,7 +33,8 @@ export class FAQService {
         "IsActive",
         "IsFeatured",
         "DisplayOrder"
-      )();
+      ).top(4999)
+      ();
 
       console.log("FAQs returned from SharePoint:", items);
 
@@ -123,7 +124,12 @@ public async getCategoriesWithFaqs(): Promise<string[]> {
     .select("Category")();
 
   const categories = items
-   
+    .filter(item => {
+      const status = item.IsActive;
+      return status === "Published" ||
+             status === "Draft" ||
+             status === "Archived";
+    })
     .map(item => item.Category)
     .filter((category): category is string =>
       typeof category === "string" && category.trim() !== ""

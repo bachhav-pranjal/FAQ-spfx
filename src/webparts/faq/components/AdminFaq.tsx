@@ -48,7 +48,9 @@ interface IAdminFaqState {
   editingId: number | null;
   isDeleteDialogOpen: boolean;
   faqToDelete: IFAQ | null;
-  isDeleting: boolean;
+  isDeleting: boolean; 
+  formCategoryOptions: IDropdownOption[];
+  isLoadingCategories: boolean;
 }
 
 export default class AdminFaq extends React.Component<
@@ -62,7 +64,9 @@ export default class AdminFaq extends React.Component<
     isFormOpen: false,
     question: '',
     answer: '',
-    formCategory: 'Other',
+    formCategory: '',
+    formCategoryOptions: [],
+    isLoadingCategories: false,
     formStatus: 'Draft',
     isFeatured: false,
     displayOrder: 1,
@@ -74,17 +78,7 @@ export default class AdminFaq extends React.Component<
     isDeleting: false
   };
 
-  private _formCategoryOptions: IDropdownOption[] = [
-    { key: 'IT Support', text: 'IT Support' },
-    { key: 'Microsoft Teams', text: 'Microsoft Teams' },
-    { key: 'SharePoint', text: 'SharePoint' },
-    { key: 'HR', text: 'HR' },
-    { key: 'Microsoft 365', text: 'Microsoft 365' },
-    { key: 'Power Apps', text: 'Power Apps' },
-    { key: 'Power Automate', text: 'Power Automate' },
-    { key: 'Other', text: 'Other' }
-  ];
-
+  
   private _formStatusOptions: IDropdownOption[] = [
     { key: 'Published', text: 'Published' },
     { key: 'Draft', text: 'Draft' },
@@ -93,35 +87,39 @@ export default class AdminFaq extends React.Component<
 
   // Open a blank form to add an FAQ
   private _openAddForm = (): void => {
-    this.setState({
-      isFormOpen: true,
-      editingId: null,
-      question: '',
-      answer: '',
-      formCategory: 'Other',
-      formStatus: 'Draft',
-      isFeatured: false,
-      displayOrder: 1,
-      errorMessage: '',
-      successMessage: ''
-    });
-  };
+  this.setState({
+    isFormOpen: true,
+    editingId: null,
+    question: '',
+    answer: '',
+    formCategory: '',
+    formStatus: 'Draft',
+    isFeatured: false,
+    displayOrder: 1,
+    errorMessage: '',
+    successMessage: ''
+  });
+
+  void this._loadCategoryOptions();
+};
 
   // Open the form with the selected FAQ's existing values
   private _handleEdit = (faq: IFAQ): void => {
-    this.setState({
-      isFormOpen: true,
-      editingId: faq.Id,
-      question: faq.Title || '',
-      answer: faq.Answer || '',
-      formCategory: faq.Category || 'Other',
-      formStatus: faq.Status || 'Draft',
-      isFeatured: !!faq.IsFeatured,
-      displayOrder: Number(faq.DisplayOrder) || 1,
-      errorMessage: '',
-      successMessage: ''
-    });
-  };
+  this.setState({
+    isFormOpen: true,
+    editingId: faq.Id,
+    question: faq.Title || '',
+    answer: faq.Answer || '',
+    formCategory: faq.Category || '',
+    formStatus: faq.Status || 'Draft',
+    isFeatured: !!faq.IsFeatured,
+    displayOrder: Number(faq.DisplayOrder) || 1,
+    errorMessage: '',
+    successMessage: ''
+  });
+
+  void this._loadCategoryOptions();
+};
 
   private _closeForm = (): void => {
     this.setState({
@@ -187,6 +185,34 @@ export default class AdminFaq extends React.Component<
     }
   };
 
+  //load categories from SharePoint when the component mounts
+
+  private _loadCategoryOptions = async (): Promise<void> => {
+  this.setState({ isLoadingCategories: true });
+
+  try {
+    const categories = await this.props.faqService.getCategories();
+
+    const options: IDropdownOption[] = categories.map(category => ({
+      key: category,
+      text: category
+    }));
+
+    this.setState({
+      formCategoryOptions: options,
+      isLoadingCategories: false
+    });
+  } catch (error) {
+    console.error('Error loading SharePoint categories:', error);
+
+    this.setState({
+      formCategoryOptions: [],
+      isLoadingCategories: false,
+      errorMessage: 'Could not load categories from SharePoint.'
+    });
+  }
+};
+
   private _getFilteredFaqs = (): IFAQ[] => {
     const {
       searchText,
@@ -229,16 +255,7 @@ export default class AdminFaq extends React.Component<
       faq => faq.Status === 'Archived'
     ).length;
 
-    const categories: string[] = [
-  'IT Support',
-  'Microsoft Teams',
-  'SharePoint',
-  'HR',
-  'Microsoft 365',
-  'Power Apps',
-  'Power Automate',
-  'Other'
-];
+   
 
 const filteredFaqs = this._getFilteredFaqs();
 
@@ -307,11 +324,7 @@ const categoryOptions: IDropdownOption[] = [
             </Text>
           </Stack>
 
-          <Stack horizontal tokens={{ childrenGap: 10 }}>
-            <DefaultButton
-              text="Categories"
-              iconProps={{ iconName: 'Tag' }}
-            />
+          <Stack>
 
             <PrimaryButton
               text="Add FAQ"
@@ -617,18 +630,27 @@ const categoryOptions: IDropdownOption[] = [
             />
 
             <Dropdown
-              label="Category"
-              options={this._formCategoryOptions}
-              selectedKey={this.state.formCategory}
-              onChange={(_, option) => {
-                if (option) {
-                  this.setState({
-                    formCategory: String(option.key)
-                  });
+                label="Category"
+                placeholder={
+                  this.state.isLoadingCategories
+                    ? 'Loading categories...'
+                    : 'Select a category'
                 }
-              }}
-              required
-            />
+                options={this.state.formCategoryOptions}
+                selectedKey={this.state.formCategory || undefined}
+                disabled={
+                  this.state.isLoadingCategories ||
+                  this.state.formCategoryOptions.length === 0
+                }
+                onChange={(_, option) => {
+                  if (option) {
+                    this.setState({
+                      formCategory: String(option.key)
+                    });
+                  }
+                }}
+                required
+              />
 
             <Dropdown
               label="Status"
@@ -720,7 +742,7 @@ const categoryOptions: IDropdownOption[] = [
                       editingId: null,
                       question: '',
                       answer: '',
-                      formCategory: 'Other',
+                      formCategory: '',
                       formStatus: 'Draft',
                       isFeatured: false,
                       displayOrder: 1,
